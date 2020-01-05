@@ -7,7 +7,8 @@
       "lib": [
         "es2016"
       ],
-      "noImplicitAny": false,
+      "strictNullChecks": true,
+      "noImplicitAny": true,
       "sourceMap": true,
       "inlineSources": true,
       "outDir": "./dist",

@@ -14,12 +14,23 @@ export class Receiver {
     
     consume = (sendToSocket: (msgFromRabbit: string) => any) => {
         
-        amqp.connect('amqp://user:bitnami@localhost', (error0, connection) => {
+        amqp.connect('amqp://user:bitnami@localhost', async (error0, connection) => {
             if (error0) {
                 console.log(error0);
                 throw error0;
             }
 
+            // const channel = await new Promise((resolve, reject) => {
+            //     connection.createChannel((error1, channel) => {
+            //         if (error1) {
+            //             reject(error1);
+            //         }
+
+            //         resolve(channel);
+            //     })
+            // });
+
+            
 
             connection.createChannel((error1, channel) => {
                 if (error1) {

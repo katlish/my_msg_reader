@@ -1,0 +1,14 @@
+- promises VS callbacks
+- import VS require
+- typescript
+    - tsconfig.json
+    - how typescript compiler works (js file knows about types via map file)
+    - strict modes of compiler (noImplicitAny will complain on missing types)
+    - install typescript sa Dev dependency only, cause each project will use different versions
+    - in order to define special types in the doc (like Server type) we need to install its lib 
+- node js 
+    - https://nodejs.org/api/
+- debugger 
+    - launch.json file is defining which doc is for debugging - "program": "${workspaceFolder}/msg-reader.ts"
+- object oriented
+    - design patterns

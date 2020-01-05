@@ -3,6 +3,7 @@ const app = express();
 
 import { Sender } from './sender';
 import { Receiver } from './receiver';
+import { Server } from 'http';
 
 
 
@@ -13,7 +14,7 @@ export class MessageReader {
     port: number;
     qtosend: string;
     qtoreceive: string;
-    io: any;
+    io: Server;
     server: any;
 
     constructor(port: number, qtosend: string, qtoreceive: string) { 
