@@ -37,48 +37,112 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-var amqp = require('amqplib/callback_api');
+var Amqp = require("amqplib");
 var Receiver = /** @class */ (function () {
-    function Receiver(q) {
+    function Receiver(q, credentials) {
         var _this = this;
+        this.assertQ = function () {
+            _this.channel.assertQueue(_this.q, {
+                durable: false
+            });
+            console.log("q asserted.");
+        };
         this.consume = function (sendToSocket) {
-            amqp.connect('amqp://user:bitnami@localhost', function (error0, connection) { return __awaiter(_this, void 0, void 0, function () {
-                var _this = this;
-                return __generator(this, function (_a) {
-                    if (error0) {
-                        console.log(error0);
-                        throw error0;
+            if (_this.isConnected === true) {
+                console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", _this.q);
+                _this.channel.consume(_this.q, function (msg) {
+                    if (sendToSocket) {
+                        sendToSocket(msg.content.toString());
+                        console.log("sendToSocket is called and finished");
                     }
-                    // const channel = await new Promise((resolve, reject) => {
-                    //     connection.createChannel((error1, channel) => {
-                    //         if (error1) {
-                    //             reject(error1);
-                    //         }
-                    //         resolve(channel);
-                    //     })
-                    // });
-                    connection.createChannel(function (error1, channel) {
-                        if (error1) {
-                            throw error1;
-                        }
-                        channel.assertQueue(_this.q, {
-                            durable: false
-                        });
-                        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", _this.q);
-                        channel.consume(_this.q, function (msg) {
-                            sendToSocket(msg.content.toString());
-                            console.log("sendToSocket is called and finished");
-                        }, {
-                            noAck: true // when true - receiver doesn't have any problems and is ready to receive. 
-                            // when false - receiver has a problem and asks rabbit to store the message in its memory
-                        });
-                    });
-                    return [2 /*return*/];
+                    else {
+                        console.log("msg: " + msg.content.toString());
+                    }
+                }, {
+                    noAck: true // when true - receiver doesn't have any problems and is ready to receive. 
+                    // when false - receiver has a problem and asks rabbit to store the message in its memory
                 });
-            }); });
+            }
+            else {
+                console.log("rabbit failed to connect!");
+            }
         };
         this.q = q;
+        this.credentials = credentials;
+        this.isConnected = false;
     }
+    Receiver.prototype.connectionToRabbit = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var connection;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, Amqp.connect(this.credentials)];
+                    case 1:
+                        connection = _a.sent();
+                        console.log("connection created: " + connection);
+                        return [2 /*return*/, connection];
+                }
+            });
+        });
+    };
+    Receiver.prototype.createChannel = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var channel;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.connection.createChannel()];
+                    case 1:
+                        channel = _a.sent();
+                        console.log("channel created.");
+                        return [2 /*return*/, channel];
+                }
+            });
+        });
+    };
+    Receiver.prototype.runRabbitAndAssertQ = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        _a = this;
+                        return [4 /*yield*/, this.connectionToRabbit()];
+                    case 1:
+                        _a.connection = _c.sent();
+                        _b = this;
+                        return [4 /*yield*/, this.createChannel()];
+                    case 2:
+                        _b.channel = _c.sent();
+                        if (this.connection && this.channel) {
+                            this.isConnected = true;
+                            this.assertQ();
+                            console.log("rabbit connected and is running.");
+                        }
+                        else {
+                            console.log("Connection failed => status of connections: connection = " + this.connection + ", channel = " + this.channel);
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     return Receiver;
 }());
 exports.Receiver = Receiver;
+function runReceiver() {
+    return __awaiter(this, void 0, void 0, function () {
+        var receiver;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    receiver = new Receiver("fromAtoB", "amqp://user:bitnami@localhost");
+                    return [4 /*yield*/, receiver.runRabbitAndAssertQ()];
+                case 1:
+                    _a.sent();
+                    receiver.consume();
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+runReceiver();
