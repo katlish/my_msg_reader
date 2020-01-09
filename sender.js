@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -37,41 +36,31 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-// const amqp = require('amqplib/callback_api');
 var Amqp = require("amqplib");
-// "amqp://user:bitnami@localhost"
 //FIXME: store all the vars in members, call to functions in the constructor 
 //TODO: how to catch errors in constructor?
 //TODO: create a function to establish all the infrastructure that will be called in the constructor
 //FIXME: types of the connection, channel
 var Sender = /** @class */ (function () {
-    function Sender(q, credentials) {
+    function Sender(exchange, credentials) {
         var _this = this;
-        this.assertQ = function () {
-            _this.channel.assertQueue(_this.q, {
-                durable: false
-            });
-            console.log("q asserted.");
-        };
-        this.send = function (msg) {
-            // amqp.connect('amqp://user:bitnami@localhost', (error0, connection) => {
-            //     if (error0) {
-            //         console.log(error0);
-            //         throw error0;
-            //     }
-            // connection.createChannel((error1, channel) => {
-            //     if (error1) {
-            //         throw error1;
-            //     }
-            // channel.assertQueue(this.q, {
+        this.assertEx = function () {
+            // this.channel.assertQueue(this.q, {
             //     durable: false
             // });
-            _this.channel.sendToQueue(_this.q, Buffer.from(msg));
-            console.log("msg " + msg + " sent to rabbitMQ");
-            // });
-            // });
+            // console.log("q asserted.")
+            _this.channel.assertExchange(_this.exchange, 'direct', {
+                durable: false
+            });
+            console.log("exchange asserted.");
         };
-        this.q = q;
+        this.send = function (msg, routingKey) {
+            _this.channel.publish(_this.exchange, routingKey, Buffer.from(msg));
+            console.log(" [x] Msg sent by routing key %s is: '%s'", routingKey, msg);
+            // this.channel.sendToQueue(this.q, Buffer.from(msg));
+            // console.log(`msg ${msg} sent to rabbitMQ`)
+        };
+        this.exchange = exchange;
         this.credentials = credentials;
         this.isConnected = false;
     }
@@ -103,7 +92,7 @@ var Sender = /** @class */ (function () {
             });
         });
     };
-    Sender.prototype.runRabbitAndAssertQ = function () {
+    Sender.prototype.runRabbitAndAssertExchange = function () {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b;
             return __generator(this, function (_c) {
@@ -119,11 +108,13 @@ var Sender = /** @class */ (function () {
                         _b.channel = _c.sent();
                         if (this.connection && this.channel) {
                             this.isConnected = true;
-                            this.assertQ();
-                            console.log("rabbit connected and is running.");
+                            this.assertEx();
+                            console.log("rabbit connected and exchange is asserted.");
                         }
-                        console.log("isConnected = " + this.isConnected);
-                        return [2 /*return*/, this.isConnected];
+                        else {
+                            console.log("Connection failed => status of connections: connection = " + this.connection + ", channel = " + this.channel);
+                        }
+                        return [2 /*return*/];
                 }
             });
         });
@@ -131,19 +122,17 @@ var Sender = /** @class */ (function () {
     return Sender;
 }());
 exports.Sender = Sender;
-// async function isRunning(sender: Sender) : Promise<boolean> {
-//     return await sender.runRabbitAndAssertQ();
-// } 
 function runSender() {
     return __awaiter(this, void 0, void 0, function () {
         var sender;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    sender = new Sender("fromAtoB", "amqp://user:bitnami@localhost");
-                    return [4 /*yield*/, sender.runRabbitAndAssertQ()];
+                    sender = new Sender("exchange", "amqp://user:bitnami@localhost");
+                    return [4 /*yield*/, sender.runRabbitAndAssertExchange()];
                 case 1:
-                    (_a.sent()) ? sender.send("bla") : console.log("isRun = false");
+                    _a.sent();
+                    sender.send("bla", "fromAtoB");
                     return [2 /*return*/];
             }
         });

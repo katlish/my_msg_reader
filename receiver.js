@@ -39,18 +39,28 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 exports.__esModule = true;
 var Amqp = require("amqplib");
 var Receiver = /** @class */ (function () {
-    function Receiver(q, credentials) {
+    function Receiver(exchange, credentials) {
         var _this = this;
-        this.assertQ = function () {
-            _this.channel.assertQueue(_this.q, {
+        this.assertEx = function () {
+            // this.channel.assertQueue(this.q, {
+            //     durable: false
+            // });
+            // console.log("q asserted.")
+            _this.channel.assertExchange(_this.exchange, 'direct', {
                 durable: false
             });
-            console.log("q asserted.");
+            console.log("exchange asserted.");
         };
-        this.consume = function (sendToSocket) {
+        this.assertAndBindToQ = function (q) {
+            _this.channel.assertQueue(q);
+            _this.channel.bindQueue(q, _this.exchange, q);
+            console.log("q asserted and bound.");
+        };
+        this.consume = function (bindingKey, sendToSocket) {
             if (_this.isConnected === true) {
-                console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", _this.q);
-                _this.channel.consume(_this.q, function (msg) {
+                _this.assertAndBindToQ(bindingKey);
+                console.log(" [*] Waiting for messages in exchange %s. To exit press CTRL+C", _this.exchange);
+                _this.channel.consume(bindingKey, function (msg) {
                     if (sendToSocket) {
                         sendToSocket(msg.content.toString());
                         console.log("sendToSocket is called and finished");
@@ -67,7 +77,7 @@ var Receiver = /** @class */ (function () {
                 console.log("rabbit failed to connect!");
             }
         };
-        this.q = q;
+        this.exchange = exchange;
         this.credentials = credentials;
         this.isConnected = false;
     }
@@ -99,7 +109,7 @@ var Receiver = /** @class */ (function () {
             });
         });
     };
-    Receiver.prototype.runRabbitAndAssertQ = function () {
+    Receiver.prototype.runRabbitAndAssertExchange = function () {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b;
             return __generator(this, function (_c) {
@@ -114,9 +124,9 @@ var Receiver = /** @class */ (function () {
                     case 2:
                         _b.channel = _c.sent();
                         if (this.connection && this.channel) {
+                            this.assertEx();
                             this.isConnected = true;
-                            this.assertQ();
-                            console.log("rabbit connected and is running.");
+                            console.log("rabbit connected and exchange is asserted.");
                         }
                         else {
                             console.log("Connection failed => status of connections: connection = " + this.connection + ", channel = " + this.channel);
@@ -135,11 +145,11 @@ function runReceiver() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    receiver = new Receiver("fromAtoB", "amqp://user:bitnami@localhost");
-                    return [4 /*yield*/, receiver.runRabbitAndAssertQ()];
+                    receiver = new Receiver("exchange", "amqp://user:bitnami@localhost");
+                    return [4 /*yield*/, receiver.runRabbitAndAssertExchange()];
                 case 1:
                     _a.sent();
-                    receiver.consume();
+                    receiver.consume("fromAtoB");
                     return [2 /*return*/];
             }
         });

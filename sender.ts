@@ -1,23 +1,19 @@
-#!/usr/bin/env node
-// const amqp = require('amqplib/callback_api');
 import * as Amqp from 'amqplib';
 
-// "amqp://user:bitnami@localhost"
 //FIXME: store all the vars in members, call to functions in the constructor 
 //TODO: how to catch errors in constructor?
-//TODO: create a function to establish all the infrastructure that will be called in the constructor
 //FIXME: types of the connection, channel
 
 export class Sender {
-    q: string;
+    exchange: string;
     credentials: string;
     connection: any;
     channel: any;
     isConnected: boolean;
 
 
-    constructor(q: string, credentials: string) { 
-        this.q = q; 
+    constructor(exchange: string, credentials: string) { 
+        this.exchange = exchange; 
         this.credentials = credentials;
         this.isConnected = false;
     }
@@ -34,61 +30,38 @@ export class Sender {
         return channel;
     }
 
-    private assertQ = () : void => {
-        this.channel.assertQueue(this.q, {
+    private assertEx = () : void => {
+        this.channel.assertExchange(this.exchange, 'direct', {
             durable: false
         });
-        console.log("q asserted.")
+        console.log("exchange asserted.")
     }
 
-    async runRabbitAndAssertQ() : Promise<boolean> {
+    async runRabbitAndAssertExchange() {
         this.connection = await this.connectionToRabbit();
         this.channel = await this.createChannel();
         if (this.connection && this.channel) {
             this.isConnected = true;
-            this.assertQ();
-            console.log("rabbit connected and is running.")
+            this.assertEx();
+            console.log("rabbit connected and exchange is asserted.")
+        } else {
+            console.log(`Connection failed => status of connections: connection = ${this.connection}, channel = ${this.channel}`);
         }
-        console.log(`isConnected = ${this.isConnected}`);
-
-        return this.isConnected;
     }
 
-    send = (msg: string) => {
-        
-        // amqp.connect('amqp://user:bitnami@localhost', (error0, connection) => {
-        //     if (error0) {
-        //         console.log(error0);
-        //         throw error0;
-        //     }
-
-
-            // connection.createChannel((error1, channel) => {
-            //     if (error1) {
-            //         throw error1;
-            //     }
-                
-                // channel.assertQueue(this.q, {
-                //     durable: false
-                // });
-                
-                this.channel.sendToQueue(this.q, Buffer.from(msg));
-                
-                console.log(`msg ${msg} sent to rabbitMQ`)
-            // });
-            
-                
-        // });
-
+    send = (msg: string, routingKey: string) => {
+        this.channel.publish(this.exchange, routingKey, Buffer.from(msg));
+        console.log(" [x] Msg sent by routing key %s is: '%s'", routingKey, msg);
+        // this.channel.sendToQueue(this.q, Buffer.from(msg));
+        // console.log(`msg ${msg} sent to rabbitMQ`)
     }
 }
 
-// async function isRunning(sender: Sender) : Promise<boolean> {
-//     return await sender.runRabbitAndAssertQ();
-// } 
+
 async function runSender() {
-    const sender = new Sender("fromAtoB", "amqp://user:bitnami@localhost");
-    await sender.runRabbitAndAssertQ() ? sender.send("bla") : console.log(`isRun = false`)
+    const sender = new Sender("exchange", "amqp://user:bitnami@localhost");
+    await sender.runRabbitAndAssertExchange();
+    sender.send("bla", "fromAtoB");
 }
 
 runSender();
