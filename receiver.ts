@@ -83,10 +83,10 @@ export class Receiver {
     }
 }
 
-async function runReceiver() {
-    const receiver = new Receiver("exchange", "amqp://user:bitnami@localhost");
-    await receiver.runRabbitAndAssertExchange();
-    receiver.consume("fromAtoB");
-}
+// async function runReceiver() {
+//     const receiver = new Receiver("exchange", "amqp://user:bitnami@localhost");
+//     await receiver.runRabbitAndAssertExchange();
+//     receiver.consume("fromAtoB");
+// }
 
-runReceiver();
+// runReceiver();

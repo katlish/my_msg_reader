@@ -4,7 +4,7 @@ import * as Amqp from 'amqplib';
 //TODO: how to catch errors in constructor?
 //FIXME: types of the connection, channel
 
-export class Sender {
+export class RabbitMQReader {
     exchange: string;
     credentials: string;
     connection: any;
@@ -37,6 +37,12 @@ export class Sender {
         console.log("exchange asserted.")
     }
 
+    private assertAndBindToQ = (q: string) : void => {
+        this.channel.assertQueue(q);
+        this.channel.bindQueue(q, this.exchange, q);
+        console.log("q asserted and bound.")
+    }
+
     async runRabbitAndAssertExchange() {
         this.connection = await this.connectionToRabbit();
         this.channel = await this.createChannel();
@@ -49,11 +55,31 @@ export class Sender {
         }
     }
 
-    send = (msg: string, routingKey: string) => {
+    sendToRabbit = (msg: string, routingKey: string) => {
         this.channel.publish(this.exchange, routingKey, Buffer.from(msg));
         console.log(" [x] Msg sent by routing key %s is: '%s'", routingKey, msg);
         // this.channel.sendToQueue(this.q, Buffer.from(msg));
         // console.log(`msg ${msg} sent to rabbitMQ`)
+    }
+
+    consumeFromRabbit = (bindingKey: string, sendToSocket?: (msgFromRabbit: string) => any) => {
+        if (this.isConnected === true) {
+            this.assertAndBindToQ(bindingKey);
+            console.log(" [*] Waiting for messages in exchange %s. To exit press CTRL+C", this.exchange);
+            this.channel.consume(bindingKey, (msg: any) => {
+                if(sendToSocket) {
+                    sendToSocket(msg.content.toString());
+                    console.log("sendToSocket is called and finished");
+                }else{
+                    console.log(`msg: ${msg.content.toString()}`);
+                }
+            }, {
+                noAck: true // when true - receiver doesn't have any problems and is ready to receive. 
+                // when false - receiver has a problem and asks rabbit to store the message in its memory
+            });
+        }else{
+            console.log(`rabbit failed to connect!`)
+        }
     }
 }
 

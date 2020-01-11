@@ -39,26 +39,47 @@ exports.__esModule = true;
 var Amqp = require("amqplib");
 //FIXME: store all the vars in members, call to functions in the constructor 
 //TODO: how to catch errors in constructor?
-//TODO: create a function to establish all the infrastructure that will be called in the constructor
 //FIXME: types of the connection, channel
 var Sender = /** @class */ (function () {
     function Sender(exchange, credentials) {
         var _this = this;
         this.assertEx = function () {
-            // this.channel.assertQueue(this.q, {
-            //     durable: false
-            // });
-            // console.log("q asserted.")
             _this.channel.assertExchange(_this.exchange, 'direct', {
                 durable: false
             });
             console.log("exchange asserted.");
+        };
+        this.assertAndBindToQ = function (q) {
+            _this.channel.assertQueue(q);
+            _this.channel.bindQueue(q, _this.exchange, q);
+            console.log("q asserted and bound.");
         };
         this.send = function (msg, routingKey) {
             _this.channel.publish(_this.exchange, routingKey, Buffer.from(msg));
             console.log(" [x] Msg sent by routing key %s is: '%s'", routingKey, msg);
             // this.channel.sendToQueue(this.q, Buffer.from(msg));
             // console.log(`msg ${msg} sent to rabbitMQ`)
+        };
+        this.consume = function (bindingKey, sendToSocket) {
+            if (_this.isConnected === true) {
+                _this.assertAndBindToQ(bindingKey);
+                console.log(" [*] Waiting for messages in exchange %s. To exit press CTRL+C", _this.exchange);
+                _this.channel.consume(bindingKey, function (msg) {
+                    if (sendToSocket) {
+                        sendToSocket(msg.content.toString());
+                        console.log("sendToSocket is called and finished");
+                    }
+                    else {
+                        console.log("msg: " + msg.content.toString());
+                    }
+                }, {
+                    noAck: true // when true - receiver doesn't have any problems and is ready to receive. 
+                    // when false - receiver has a problem and asks rabbit to store the message in its memory
+                });
+            }
+            else {
+                console.log("rabbit failed to connect!");
+            }
         };
         this.exchange = exchange;
         this.credentials = credentials;
@@ -138,4 +159,4 @@ function runSender() {
         });
     });
 }
-runSender();
+// runSender();
